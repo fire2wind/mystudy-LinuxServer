@@ -64,13 +64,14 @@ template<typename T>
 bool threadpool<T>::append(T* request)
 {
     m_lock.lock();
-    if(m_workqueue.size() > m_max_request_num){
+    if(m_workqueue.size() >= m_max_request_num){
         m_lock.unlock();
         return false;
     }
     m_workqueue.push_back(request);
     m_lock.unlock();
     m_sem.post();       //添加了一个请求，信号量+1
+    return true;
 }
 
 template<typename T>

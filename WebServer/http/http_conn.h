@@ -75,11 +75,14 @@ public:
     ~http_conn() {}
 
     void process();     //处理请求并响应
-    void init(int clifd, const sockaddr_in& cliaddr);   //初始化连接
+    void init(int clifd, const sockaddr_in& cliaddr, char* root);   //初始化连接
     void close_conn();  //关闭连接
 
     bool read();        //非阻塞读
     bool write();       //非阻塞写
+    sockaddr_in *get_address(){
+        return &m_addr;
+    }
 
 private:
     void init();    //初始化成员变量
@@ -127,6 +130,7 @@ private:
     char* m_version;    //HTTP版本
     METHOD m_method;    //请求方法
 
+    char* doc_root;         //根目录
     char* m_host;           //主机名
     bool m_connection;      //是否保持连接
     int m_content_length;   //消息体长度

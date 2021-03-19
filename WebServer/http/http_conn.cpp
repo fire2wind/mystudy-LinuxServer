@@ -12,8 +12,6 @@ const char* error_404_form = "The requested file was not found on this server.\n
 const char* error_500_title = "Internal Error";
 const char* error_500_form = "There was an unusual problem serving the requested file.\n";
 
-// 网站的根目录
-const char* doc_root = "/home/lhx/桌面/Linux-Server/WebServer/resources";
 //设置文件描述符非阻塞
 int setnonblock(int fd)
 {
@@ -28,7 +26,7 @@ void addfd(int epfd, int fd, bool one_shot)
 {
     epoll_event event;
     event.data.fd = fd;
-    event.events = EPOLLIN | EPOLLRDHUP;
+    event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
 
     if(one_shot)
         event.events |= EPOLLONESHOT;
@@ -68,11 +66,12 @@ void http_conn::close_conn()
 }
 
 
-void http_conn::init(int clifd, const sockaddr_in& cliaddr)
+void http_conn::init(int clifd, const sockaddr_in& cliaddr, char* root)
 {
     m_sockfd = clifd;
     m_addr = cliaddr;
 
+    doc_root = root;
     //设置端口复用
     int reuse = 1;
     setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
@@ -256,7 +255,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char* text)
     if(!m_version)
         return BAD_REQUEST;
     *m_version++ = '\0';
-    if(strcasecmp(m_version, "HTTP/1.1") != 0)
+    if((strcasecmp(m_version, "HTTP/1.1") != 0) && (strcasecmp(m_version, "HTTP/1.0") != 0))
         return BAD_REQUEST;
 
     //  http://IP:端口号/index.html
@@ -405,7 +404,7 @@ bool http_conn::write()
     }
     while(1){
         tmp = writev(m_sockfd, m_iv, m_iv_count);
-        if(tmp <= -1){
+        if(tmp < 0){
             // 如果TCP写缓冲没有空间，则等待下一轮EPOLLOUT事件，虽然在此期间，
             // 服务器无法立即接收到同一客户的下一个请求，但可以保证连接的完整性。
             if(errno == EAGAIN){
@@ -417,7 +416,6 @@ bool http_conn::write()
         }
         bytes_to_send -= tmp;
         bytes_have_send += tmp;
-        
         
         if(bytes_have_send >= m_iv[0].iov_len){
             //响应头已发送完毕
@@ -444,7 +442,7 @@ bool http_conn::write()
             }
         }
     }
-    return true;
+    //return true;
 }
 
 bool http_conn::add_response(const char* format, ...){

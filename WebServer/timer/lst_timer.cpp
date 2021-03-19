@@ -104,7 +104,7 @@ void sort_timer_lst::tick(){
     if(!head)
         return;
 
-    printf("timer tick\n");
+    //printf("timer tick\n");
     time_t cur = time(NULL);    //获取当前系统时间
     util_timer* tmp = head;
 
@@ -177,4 +177,10 @@ void Utils::timer_handler(){
     m_timer_lst.tick();
     //因为一次 alarm 调用只会引起一次SIGALARM 信号，所以我们要重新定时，以不断触发 SIGALARM信号。
     alarm(m_TIMESLOT);
+}
+
+void Utils::show_error(int clifd, const char* info)
+{
+    send(clifd, info, strlen(info), 0);
+    close(clifd);
 }

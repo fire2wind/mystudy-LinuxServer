@@ -5,15 +5,7 @@
 #include "timer/lst_timer.h"
 #include "webserver.h"
 
-//添加文件描述符
-extern void addfd(int epfd, int fd, bool one_shot);
-
-//删除文件描述符
-extern void removefd(int epfd, int fd);
-
-//修改文件描述符，ev代表事件
-extern void modfd(int epfd, int fd, int ev);
-
+/*
 //信号处理函数，添加信号捕捉
 void addsig(int sig, void(handler)(int))
 {
@@ -24,6 +16,7 @@ void addsig(int sig, void(handler)(int))
     assert(sigaction(sig, &sa, NULL) != -1);      //捕捉信号
 
 }
+*/
 
 int main(int argc, char* argv[])
 {
@@ -37,7 +30,7 @@ int main(int argc, char* argv[])
     int port = atoi(argv[1]);
 
     //对SIGPIE信号进行处理，忽略SIGPIPE信号，防止主线程退出
-    addsig(SIGPIPE, SIG_IGN);
+    //addsig(SIGPIPE, SIG_IGN);
 
     WebServer server;
 

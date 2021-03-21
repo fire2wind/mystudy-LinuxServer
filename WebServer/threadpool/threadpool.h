@@ -21,9 +21,11 @@ private:
 public:
     threadpool(int thread_num = 8, int max_request_num = 10000);
     ~threadpool();
+    //向请求队列中加入任务
     bool append(T* request);
 
 private:
+    //工作线程运行的函数，不断从工作队列中取出任务并执行
     static void* worker(void* arg);
     void run();
 };
@@ -68,9 +70,12 @@ bool threadpool<T>::append(T* request)
         m_lock.unlock();
         return false;
     }
+    //添加任务
     m_workqueue.push_back(request);
     m_lock.unlock();
-    m_sem.post();       //添加了一个请求，信号量+1
+
+    //添加了一个请求，信号量+1，表示有任务要处理
+    m_sem.post();       
     return true;
 }
 
@@ -87,13 +92,13 @@ void threadpool<T>::run()
 {
     while(!m_stop){
         m_sem.wait();               //处理请求，信号量-1，信号量为0会阻塞
-        m_lock.lock();
+        m_lock.lock();              //被唤醒后先加锁
         if(m_workqueue.empty()){    
             m_lock.unlock();
             continue;
         }
-        T* request = m_workqueue.front();
-        m_workqueue.pop_front();
+        T* request = m_workqueue.front();   //从请求队列中取出第一个任务
+        m_workqueue.pop_front();    //将任务从请求队列中删除
         m_lock.unlock();
         if(!request){               //请求为空不需要处理
             continue;

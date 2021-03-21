@@ -12,8 +12,11 @@ sort_timer_lst::~sort_timer_lst(){
 void sort_timer_lst::add_timer(util_timer* timer){
     if(!timer)
         return;
-    if(!head)
+    if(!head){
         head = tail = timer;
+        return;
+    }
+        
 
     if(timer->expire < head->expire){
         timer->next = head;
@@ -146,6 +149,7 @@ int Utils::setnonblocking(int fd){
 void Utils::addfd(int epfd, int fd, bool one_shot){
     epoll_event event;
     event.data.fd = fd;
+    event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
     if(one_shot)
         event.events |= EPOLLONESHOT;
     epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event);
@@ -154,18 +158,20 @@ void Utils::addfd(int epfd, int fd, bool one_shot){
 
 void Utils::sig_handler(int sig){
     //为保证函数的可重入性，保留原来的errno
+    //可重入性表示中断后再次进入该函数，环境变量与之前相同，不会丢失数据
     int save_errno = errno;
     int msg = sig;
+    //将信号值从管道写端写入，传输字符类型，而非整型
     send(u_pipefd[1], (char*)&msg, 1, 0);
     errno = save_errno;
 }
 
-void Utils::addsig(int sig, void(handler)(int), bool restart){
+void Utils::addsig(int sig, void(handler)(int), bool restart = true){
     struct sigaction sa;
     memset(&sa, '\0', sizeof(sa));
+    //信号处理函数中仅仅发送信号值，不做对应逻辑处理
     sa.sa_handler = handler;
     //一旦给信号设置了SA_RESTART标记，那么当执行某个阻塞系统调用，收到该信号时，进程不会返回，而是重新执行该系统调用。
-    //即防止进程异常退出
     if(restart)
         sa.sa_flags |= SA_RESTART;
     sigfillset(&sa.sa_mask);

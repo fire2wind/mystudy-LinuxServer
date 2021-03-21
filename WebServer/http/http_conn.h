@@ -17,6 +17,7 @@
 
 class http_conn{
 public:
+    //报文的请求方法
     enum METHOD {
         GET = 0, 
         POST, 
@@ -63,7 +64,7 @@ public:
     };
     
     // 从状态机的三种可能状态，即行的读取状态，分别表示
-    // 1.读取到一个完整的行 2.行出错 3.行数据尚且不完整
+    // 0.读取到一个完整的行 1.行出错 2.行数据尚且不完整
     enum LINE_STATUS { 
         LINE_OK = 0, 
         LINE_BAD, 
@@ -94,8 +95,11 @@ private:
     HTTP_CODE parse_header(char* text);     //解析请求头
     HTTP_CODE parse_content(char* text);  //解析请求体
     LINE_STATUS parse_line();   //解析每一行
+    
+    HTTP_CODE do_request(); //生成响应报文
+    //m_start_line是已经解析的字符
+    //这个函数的作用是将指针向后偏移，指向未处理的字符
     char* get_line() { return m_read_buff + m_start_line; }
-    HTTP_CODE do_request();
 
     //这一组函数被process_write调用以填充HTTP应答
     void unmap();
@@ -122,29 +126,33 @@ private:
     char m_read_buff[READ_BUFF_SIZE]; //读缓冲区
     int m_read_idx;         //标识读缓冲区中已经读入的客户端数据的最后一个字节的下一个位置
     int m_checked_idx;      //当前正在分析的字符在读缓冲区中的位置
-    int m_start_line;       //当前正在解析的行的起始位置
+    int m_start_line;       //已经解析的字符个数
 
-    CHECK_STATE m_check_state;  //主状态机当前所处状态
-
-    char* m_url;        //目标URL
-    char* m_version;    //HTTP版本
-    METHOD m_method;    //请求方法
-
-    char* doc_root;         //根目录
-    char* m_host;           //主机名
-    bool m_connection;      //是否保持连接
-    int m_content_length;   //消息体长度
-
-    char m_real_file[FILENAME_LEN]; //请求的目标文件的完整路径
     char m_write_buff[WRITE_BUFF_SIZE]; //写缓冲区
     int m_write_idx;            //写缓冲区中待发送的字节数
+
+    CHECK_STATE m_check_state;  //主状态机当前所处状态
+    METHOD m_method;    //请求方法
+
+    
+    
+    char* doc_root;         //根目录
+    
+
+    char m_real_file[FILENAME_LEN]; //请求的目标文件的完整路径
+    char* m_url;            //目标URL
+    char* m_version;        //HTTP版本
+    char* m_host;           //主机名
+    bool m_connection;      //是否保持连接, Connection字段
+    int m_content_length;   //消息体长度
+
     char* m_file_address;       //客户请求的目标文件被mmap到内存中的起始位置
     struct stat m_file_stat;    //目标文件的状态
     struct iovec m_iv[2];       //我们将采用writev来执行写操作，所以定义下面两个成员
     int m_iv_count;             //其中m_iv_count表示被写内存块的数量
 
-    int bytes_have_send;
-    int bytes_to_send;
+    int bytes_have_send;    //已发送的字节数
+    int bytes_to_send;      //剩余发送的字节数
 
 
 };

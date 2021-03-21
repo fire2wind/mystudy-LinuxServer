@@ -15,7 +15,7 @@ class util_timer;
 struct client_data{
     sockaddr_in address;        //客户端socket地址
     int sockfd;                 //socket文件描述符
-    char buf[BUFFER_SIZE];      //读缓存
+    //char buf[BUFFER_SIZE];      //读缓存
     util_timer* timer;          //定时器
 };
 
@@ -70,7 +70,7 @@ public:
     static void sig_handler(int sig);
 
     //设置信号函数
-    void addsig(int sig, void(handler)(int), bool restart);
+    void addsig(int sig, void(handler)(int), bool restart = true);
 
     //定时处理任务，重新定时以不断触发SIGALRM信号
     void timer_handler();

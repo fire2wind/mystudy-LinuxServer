@@ -5,6 +5,10 @@ WebServer::WebServer()
     //最大可接受http_conn数量
     users = new http_conn[MAX_FD];
 
+
+    //标记，把这里改以下，直接填充路径
+
+    
     //根目录
     char server_path[200];
     //将当前工作目录的绝对路径复制到server_path中
@@ -71,7 +75,9 @@ void WebServer::startListen()
     //创建管道
     ret = socketpair(PF_UNIX, SOCK_STREAM, 0, m_pipefd);
     assert(ret != -1);
+    //设置管道写端为非阻塞
     utils.setnonblocking(m_pipefd[1]);
+    //设置管道读端为ET非阻塞
     utils.addfd(m_epollfd, m_pipefd[0], false);
 
     utils.addsig(SIGPIPE, SIG_IGN, false); //忽略SIGPIPE信号，防止主线程退出
@@ -100,6 +106,7 @@ void WebServer::startLoop()
             int sockfd = events[i].data.fd;
 
             if(sockfd == m_listenfd){
+                //这里只处理新连接
                 bool flag = dealclientdata();
                 if(flag == false)
                     continue;
@@ -109,7 +116,7 @@ void WebServer::startLoop()
                 util_timer* timer = users_timer[sockfd].timer;
                 deal_timer(timer, sockfd);
             }
-            //处理信号
+            //管道读端对应文件描述符发生读事件
             else if((sockfd == m_pipefd[0]) && (events[i].events & EPOLLIN)){
                 bool flag = dealwithsignal(timeout, stop_server);
                 if(flag == false)
@@ -136,16 +143,21 @@ bool WebServer::dealclientdata()
 {
     struct sockaddr_in client_addr;
     socklen_t len = sizeof(client_addr);
-    int clifd = accept(m_listenfd, (struct sockaddr*)&client_addr, &len);
-    if(clifd < 0){
-        return false;
+    while(1){
+        int clifd = accept(m_listenfd, (struct sockaddr*)&client_addr, &len);
+        if(clifd < 0){
+            return false;
+        }
+        if(http_conn::m_user_num >= MAX_FD){
+            utils.show_error(clifd, "Server busy");
+            printf("Server busy\n");
+            break;
+        }
+        timer(clifd, client_addr);
+         
     }
-    if(http_conn::m_user_num >= MAX_FD){
-        utils.show_error(clifd, "Server busy");
-        return false;
-    }
-    timer(clifd, client_addr);
-    return true;
+    
+    return false;
 }
 
 void WebServer::timer(int clifd, const struct sockaddr_in& client_addr)
